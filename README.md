@@ -40,10 +40,10 @@ A simple dashboard only displays data. This project makes decisions:
 
 | Version | Link |
 |---|---|
-| 🖥️ Browser (no install) | [View on GitHub Pages](sharmi1991.github.io/singapore-mnc-risk-strategy-ai-agent/) |
-| ⚙️ Streamlit app | [Open Streamlit App](singapore-mnc-risk-agent.streamlit.app) |
+| 🖥️ Browser (no install) | [View on GitHub Pages](https://sharmi1991.github.io/singapore-mnc-risk-strategy-ai-agent/) |
+| ⚙️ Streamlit app | [Open Streamlit App](https://singapore-mnc-risk-agent.streamlit.app/) |
 
-> Update the Streamlit link above once deployed via [share.streamlit.io](https://share.streamlit.io).
+Both versions are live — try selecting different industries to see the risk score, strategic segment, and recommendation update in real time.
 
 ---
 
@@ -281,3 +281,4 @@ Full details in [`MODEL_CARD.md`](MODEL_CARD.md).
 ## 📄 License
 
 This project is available under the MIT License. Feel free to fork, adapt, and build on it.
+
