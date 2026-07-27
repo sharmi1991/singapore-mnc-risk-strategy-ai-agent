@@ -1,4 +1,4 @@
-# 🇸🇬 Singapore MNC Risk & Strategy AI Agent
+# Singapore MNC Risk & Strategy AI Agent
 
 **An agentic ML decision-support system that analyses risk and recommends strategy for multinational companies (MNCs) operating in Singapore.**
 
@@ -158,7 +158,7 @@ Risk bands: Low (< 45)  |  Medium (45–69.9)  |  High (≥ 70)
 
 ---
 
-## 🇸🇬 Real-Time Singapore Policy Context
+## Real-Time Singapore Policy Context
 
 The recommendations are grounded in current Singapore policy signals, not just the raw dataset:
 
