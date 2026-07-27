@@ -40,8 +40,8 @@ A simple dashboard only displays data. This project makes decisions:
 
 | Version | Link |
 |---|---|
-| 🖥️ Browser (no install) | [View on GitHub Pages](https://sharmi1991.github.io/singapore-mnc-risk-strategy-ai-agent/) |
-| ⚙️ Streamlit app | [Open Streamlit App](https://requirementstxt-dcnvkn98feuuhscjctxr8z.streamlit.app/) |
+| 🖥️ Browser (no install) | [View on GitHub Pages](sharmi1991.github.io/singapore-mnc-risk-strategy-ai-agent/) |
+| ⚙️ Streamlit app | [Open Streamlit App](singapore-mnc-risk-agent.streamlit.app) |
 
 > Update the Streamlit link above once deployed via [share.streamlit.io](https://share.streamlit.io).
 
