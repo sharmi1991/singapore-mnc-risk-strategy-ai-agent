@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Singapore MNC Risk & Strategy Analyzer</title>
+  <style>
+    :root {
+      --bg: #f6f7f3;
+      --panel: #ffffff;
+      --ink: #1f2933;
+      --muted: #667085;
+      --line: #d7dcd2;
+      --green: #237a57;
+      --blue: #3267a8;
+      --amber: #b7791f;
+      --red: #b54747;
+      --teal: #227c87;
+      --shadow: 0 12px 28px rgba(31, 41, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 28px clamp(18px, 4vw, 52px) 16px;
+      border-bottom: 1px solid var(--line);
+      background: #eef3ef;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 0;
+    }
+
+    .subhead {
+      max-width: 980px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    main {
+      padding: 22px clamp(18px, 4vw, 52px) 42px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .toolbar, .grid, .split {
+      display: grid;
+      gap: 16px;
+    }
+
+    .toolbar {
+      grid-template-columns: minmax(220px, 340px) 1fr;
+      align-items: end;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .strategy-line {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 110px;
+    }
+
+    .kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .kpi strong {
+      display: block;
+      font-size: 30px;
+      line-height: 1.1;
+    }
+
+    .band {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #edf4ef;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .split {
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: start;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 220px) 1fr 48px;
+      gap: 12px;
+      align-items: center;
+      margin: 12px 0;
+    }
+
+    .track {
+      height: 16px;
+      border-radius: 999px;
+      background: #e8ece5;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: var(--blue);
+      transition: width 260ms ease;
+    }
+
+    .bar-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+
+    .actions {
+      padding-left: 20px;
+      margin: 0;
+    }
+
+    .actions li {
+      margin: 0 0 10px;
+    }
+
+    .context-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .context {
+      border-left: 4px solid var(--teal);
+      background: #f4fbfa;
+      padding: 12px 14px;
+      border-radius: 6px;
+    }
+
+    .context strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .sources {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .sources a {
+      color: var(--blue);
+    }
+
+    @media (max-width: 860px) {
+      .toolbar, .split, .kpis, .context-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .bar-value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Singapore MNC Risk & Strategy Analyzer</h1>
+    <p class="subhead">A working capstone prototype that calculates industry risk, explains the pressure points, and recommends a Singapore high-value hub strategy aligned with 2026 business context.</p>
+  </header>
+
+  <main>
+    <section class="toolbar panel">
+      <div>
+        <label for="industry">Select industry</label>
+        <select id="industry"></select>
+      </div>
+      <p class="strategy-line" id="strategyLine"></p>
+    </section>
+
+    <section class="kpis" aria-label="Summary metrics">
+      <div class="kpi">
+        <span>Total risk score</span>
+        <strong id="riskScore">0</strong>
+        <em class="band" id="riskBand">Low</em>
+      </div>
+      <div class="kpi">
+        <span>Growth potential</span>
+        <strong id="growthPotential">0</strong>
+      </div>
+      <div class="kpi">
+        <span>Automation readiness</span>
+        <strong id="automationReadiness">0</strong>
+      </div>
+      <div class="kpi">
+        <span>Regional expansion fit</span>
+        <strong id="regionalFit">0</strong>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="panel">
+        <h2>Risk Breakdown</h2>
+        <div id="bars"></div>
+      </div>
+      <div class="panel">
+        <h2>Recommended Action Plan</h2>
+        <ol class="actions" id="actions"></ol>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Advanced ML Intelligence</h2>
+      <div class="context-grid">
+        <div class="context">
+          <strong>Strategic segment</strong>
+          <span id="segmentName">-</span>
+        </div>
+        <div class="context">
+          <strong>Monte Carlo stress result</strong>
+          <span id="stressResult">-</span>
+        </div>
+        <div class="context">
+          <strong>Top risk drivers</strong>
+          <span id="topDrivers">-</span>
+        </div>
+        <div class="context">
+          <strong>Strategy confidence</strong>
+          <span id="confidenceScore">-</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Real-Time Singapore Fit</h2>
+      <div class="context-grid">
+        <div class="context">
+          <strong>High-value hub</strong>
+          Singapore is suitable for regional HQ, strategy, R&D, finance, compliance, and supply-chain control rather than low-cost scale-up.
+        </div>
+        <div class="context">
+          <strong>Labour planning</strong>
+          Employment Pass eligibility and COMPASS make foreign professional hiring more structured, so companies need local talent development and automation.
+        </div>
+        <div class="context">
+          <strong>Investment support</strong>
+          Refundable Investment Credit can support approved high-value activities such as HQ functions, R&D, digital services, and supply-chain management.
+        </div>
+        <div class="context">
+          <strong>External risk</strong>
+          Singapore growth remains resilient, but geopolitics, external demand, energy costs, and supply-chain shocks need scenario planning.
+        </div>
+      </div>
+    </section>
+
+    <section class="panel sources">
+      <h2>Official Sources</h2>
+      <p>
+        <a href="https://www.edb.gov.sg/en/our-industries/headquarters.html">EDB Headquarters</a> |
+        <a href="https://www.mom.gov.sg/passes-and-permits/employment-pass/eligibility">MOM Employment Pass</a> |
+        <a href="https://www.iras.gov.sg/schemes/disbursement-schemes/refundable-investment-credit-(ric)">IRAS RIC</a> |
+        <a href="https://www.mti.gov.sg/newsroom/singapore-s-gdp-grew-by-5-7-per-cent-in-the-second-quarter-of-2026/">MTI 2Q 2026 Estimates</a>
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const weights = {
+      costPressure: 0.25,
+      talentLabour: 0.20,
+      competitionGrowth: 0.18,
+      regulationCompliance: 0.17,
+      globalStrategy: 0.20
+    };
+
+    const profiles = [
+      {
+        industry: "Technology and AI services",
+        costPressure: 72,
+        talentLabour: 68,
+        competitionGrowth: 58,
+        regulationCompliance: 62,
+        globalStrategy: 56,
+        growthPotential: 86,
+        automationReadiness: 88,
+        regionalFit: 82
+      },
+      {
+        industry: "Finance and fintech",
+        costPressure: 78,
+        talentLabour: 74,
+        competitionGrowth: 65,
+        regulationCompliance: 84,
+        globalStrategy: 61,
+        growthPotential: 80,
+        automationReadiness: 76,
+        regionalFit: 78
+      },
+      {
+        industry: "Pharmaceuticals and medtech",
+        costPressure: 70,
+        talentLabour: 72,
+        competitionGrowth: 54,
+        regulationCompliance: 82,
+        globalStrategy: 63,
+        growthPotential: 83,
+        automationReadiness: 73,
+        regionalFit: 76
+      },
+      {
+        industry: "Logistics and supply chain",
+        costPressure: 69,
+        talentLabour: 59,
+        competitionGrowth: 62,
+        regulationCompliance: 60,
+        globalStrategy: 78,
+        growthPotential: 75,
+        automationReadiness: 71,
+        regionalFit: 88
+      },
+      {
+        industry: "Advanced manufacturing",
+        costPressure: 76,
+        talentLabour: 70,
+        competitionGrowth: 60,
+        regulationCompliance: 67,
+        globalStrategy: 74,
+        growthPotential: 81,
+        automationReadiness: 80,
+        regionalFit: 84
+      },
+      {
+        industry: "Professional services",
+        costPressure: 66,
+        talentLabour: 73,
+        competitionGrowth: 64,
+        regulationCompliance: 71,
+        globalStrategy: 52,
+        growthPotential: 72,
+        automationReadiness: 67,
+        regionalFit: 70
+      }
+    ];
+
+    const labels = [
+      ["Cost pressure", "costPressure"],
+      ["Talent and labour", "talentLabour"],
+      ["Competition and growth", "competitionGrowth"],
+      ["Regulation and compliance", "regulationCompliance"],
+      ["Global strategy", "globalStrategy"]
+    ];
+
+    const select = document.getElementById("industry");
+    const bars = document.getElementById("bars");
+    const actions = document.getElementById("actions");
+
+    profiles.forEach((profile, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = profile.industry;
+      select.appendChild(option);
+    });
+
+    function riskScore(profile) {
+      return (
+        profile.costPressure * weights.costPressure +
+        profile.talentLabour * weights.talentLabour +
+        profile.competitionGrowth * weights.competitionGrowth +
+        profile.regulationCompliance * weights.regulationCompliance +
+        profile.globalStrategy * weights.globalStrategy
+      ).toFixed(1);
+    }
+
+    function band(score) {
+      if (score >= 70) return "High";
+      if (score >= 45) return "Medium";
+      return "Low";
+    }
+
+    function strategicPosition(profile, score) {
+      if (profile.growthPotential >= 78 && score < 70) return "Invest and scale selectively from Singapore.";
+      if (profile.growthPotential >= 78) return "Keep Singapore as control hub, scale routine work regionally.";
+      if (score >= 70) return "Stabilise costs and compliance before major expansion.";
+      return "Optimise Singapore operations and expand through partnerships.";
+    }
+
+    function strategicSegment(profile, score) {
+      if (profile.growthPotential >= 80 && score < 70) return "High-growth controllable risk";
+      if (profile.regionalFit >= 82) return "Regional scale-out candidate";
+      if (score >= 70) return "Cost/compliance pressure zone";
+      return "Optimise before scaling";
+    }
+
+    function topRiskDrivers(profile) {
+      return labels
+        .map(([label, key]) => ({
+          label,
+          weighted: profile[key] * weights[key]
+        }))
+        .sort((a, b) => b.weighted - a.weighted)
+        .slice(0, 3)
+        .map((item) => item.label)
+        .join(", ");
+    }
+
+    function stressTest(profile, score) {
+      const exposure = (profile.costPressure * 0.75 + profile.talentLabour * 0.55 + profile.globalStrategy * 0.85) / 2.15;
+      const p90 = Math.min(100, score + 5.2 + (exposure - 60) * 0.08);
+      const probabilityHigh = Math.max(0, Math.min(1, (p90 - 64) / 55));
+      return {
+        p90: p90.toFixed(1),
+        probabilityHigh: (probabilityHigh * 100).toFixed(1)
+      };
+    }
+
+    function confidence(profile, score) {
+      const stress = stressTest(profile, score);
+      const readiness = (profile.automationReadiness + profile.regionalFit + profile.growthPotential) / 3;
+      const resilience = 100 - Number(stress.probabilityHigh);
+      return Math.max(0, Math.min(100, 0.45 * readiness + 0.35 * resilience + 0.20 * (100 - score))).toFixed(1);
+    }
+
+    function recommendationList(profile) {
+      const list = [];
+      if (profile.costPressure >= 70) {
+        list.push("Move routine back-office work to lower-cost regional shared-service locations while keeping leadership, treasury, compliance, and innovation in Singapore.");
+      } else {
+        list.push("Keep Singapore operations lean through hybrid work, vendor consolidation, and productivity tracking.");
+      }
+      if (profile.talentLabour >= 68) {
+        list.push("Reduce hiring pressure through upskilling, university partnerships, internal mobility, and automation of repetitive roles.");
+      }
+      if (profile.competitionGrowth >= 60) {
+        list.push("Use Singapore as an ASEAN launchpad instead of relying on the small domestic market; enter new markets through distributors, joint ventures, or phased pilots.");
+      }
+      if (profile.regulationCompliance >= 70) {
+        list.push("Create a compliance operating model covering data privacy, employment pass planning, tax, sector rules, audit cadence, and board reporting.");
+      }
+      if (profile.globalStrategy >= 65) {
+        list.push("Run quarterly scenario planning for tariffs, external demand shocks, energy costs, geopolitics, and supply-chain disruption.");
+      }
+      if (profile.automationReadiness >= 75) {
+        list.push("Prioritise AI-enabled workflows such as finance reporting, customer support triage, demand forecasting, and compliance monitoring.");
+      }
+      return list;
+    }
+
+    function update() {
+      const profile = profiles[Number(select.value)];
+      const score = Number(riskScore(profile));
+      document.getElementById("riskScore").textContent = score.toFixed(1);
+      document.getElementById("riskBand").textContent = band(score);
+      document.getElementById("growthPotential").textContent = profile.growthPotential;
+      document.getElementById("automationReadiness").textContent = profile.automationReadiness;
+      document.getElementById("regionalFit").textContent = profile.regionalFit;
+      document.getElementById("strategyLine").textContent = strategicPosition(profile, score);
+      const stress = stressTest(profile, score);
+      document.getElementById("segmentName").textContent = strategicSegment(profile, score);
+      document.getElementById("stressResult").textContent = `P90 risk ${stress.p90}/100; high-risk probability ${stress.probabilityHigh}%`;
+      document.getElementById("topDrivers").textContent = topRiskDrivers(profile);
+      document.getElementById("confidenceScore").textContent = `${confidence(profile, score)}/100`;
+
+      bars.innerHTML = "";
+      labels.forEach(([label, key]) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+
+        const name = document.createElement("div");
+        name.textContent = label;
+
+        const track = document.createElement("div");
+        track.className = "track";
+        const fill = document.createElement("div");
+        fill.className = "fill";
+        fill.style.width = profile[key] + "%";
+        if (profile[key] >= 75) fill.style.background = "var(--red)";
+        else if (profile[key] >= 65) fill.style.background = "var(--amber)";
+        else fill.style.background = "var(--blue)";
+        track.appendChild(fill);
+
+        const value = document.createElement("div");
+        value.className = "bar-value";
+        value.textContent = profile[key];
+
+        row.append(name, track, value);
+        bars.appendChild(row);
+      });
+
+      actions.innerHTML = "";
+      recommendationList(profile).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        actions.appendChild(li);
+      });
+    }
+
+    select.addEventListener("change", update);
+    update();
+  </script>
+</body>
+</html>
