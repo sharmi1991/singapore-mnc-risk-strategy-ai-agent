@@ -1,29 +1,40 @@
-"""Advanced ML-style analytics for the Singapore MNC Risk & Strategy Analyzer.
+"""
+advanced_ml_engine.py
 
-This module is intentionally dependency-light. It uses numpy instead of
-scikit-learn so the project can run on machines where ML packages are not
-installed, while still demonstrating real modelling ideas:
+Advanced ML layer for the Singapore MNC Risk & Strategy AI Agent.
 
-- weighted risk scoring
-- k-means segmentation
-- Monte Carlo stress testing
-- contribution-based explainability
-- scenario-based strategy selection
+This module adds three capabilities on top of the base weighted risk score
+produced by risk_engine.py:
+
+1. K-Means strategic segmentation  — groups industries into strategic archetypes
+2. Monte Carlo stress testing      — estimates probability of an industry
+                                      crossing into high-risk territory under
+                                      simulated future shocks
+3. Explainability                  — breaks down each risk score into its
+                                      weighted contributing factors and ranks
+                                      the top drivers per industry
+
+Extracted and adapted from the project's research notebook
+(singapore-mnc-risk-strategy-ai-agent.ipynb).
 """
 
-from __future__ import annotations
-
-import csv
-from dataclasses import asdict
-from pathlib import Path
-from typing import Iterable
-
+import pandas as pd
 import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 
-from risk_engine import RISK_WEIGHTS, RiskProfile, recommendations, risk_band, weighted_risk_score
+# ---------------------------------------------------------------------------
+# Risk weights (kept in sync with risk_engine.py)
+# ---------------------------------------------------------------------------
+RISK_WEIGHTS = {
+    "cost_pressure": 0.25,
+    "talent_labour": 0.20,
+    "competition_growth": 0.18,
+    "regulation_compliance": 0.17,
+    "global_strategy": 0.20,
+}
 
-
-FEATURES = [
+ML_FEATURES = [
     "cost_pressure",
     "talent_labour",
     "competition_growth",
@@ -34,174 +45,219 @@ FEATURES = [
     "regional_expansion_fit",
 ]
 
-RISK_FEATURES = list(RISK_WEIGHTS)
+RISK_FEATURES = list(RISK_WEIGHTS.keys())
+
+# Human-readable names for the 3 K-Means clusters, based on cluster profile
+# analysis performed on the 20-industry dataset. Cluster membership was
+# inspected directly (mean feature values + industry list per cluster)
+# rather than assumed:
+#   Cluster 0 -> high regulation/talent intensity + high growth potential
+#                (Finance, Tech/AI, Pharma, Professional services, Biotech,
+#                 Healthcare, Cybersecurity, Renewable energy)
+#   Cluster 1 -> lower intensity across most dimensions, more domestic/
+#                consumer-facing (Telecom, Real estate, Hospitality,
+#                Agri-food tech, EdTech, Media)
+#   Cluster 2 -> high global-strategy exposure + regional expansion fit
+#                (Manufacturing, Logistics, Oil & gas, Aerospace, E-commerce,
+#                 Marine engineering)
+CLUSTER_NAMES = {
+    0: "High-Value Hub Candidates",
+    1: "Domestic & Consumer-Facing Segment",
+    2: "Regional Trade & Supply-Chain Exposure",
+}
+
+# NOTE on k=3: silhouette analysis on this dataset (k=2..6) gives scores in
+# the 0.195-0.211 range with no single sharply-optimal k. k=3 was chosen for
+# business interpretability (three actionable strategic archetypes) rather
+# than pure statistical optimality. See evaluate_cluster_counts() below to
+# reproduce this analysis, and README.md -> "Data Source & Methodology".
 
 
-def load_profiles(path: str | Path) -> list[RiskProfile]:
-    rows: list[RiskProfile] = []
-    with Path(path).open(newline="", encoding="utf-8") as file:
-        for row in csv.DictReader(file):
-            rows.append(
-                RiskProfile(
-                    industry=row["industry"],
-                    cost_pressure=float(row["cost_pressure"]),
-                    talent_labour=float(row["talent_labour"]),
-                    competition_growth=float(row["competition_growth"]),
-                    regulation_compliance=float(row["regulation_compliance"]),
-                    global_strategy=float(row["global_strategy"]),
-                    growth_potential=float(row["growth_potential"]),
-                    automation_readiness=float(row["automation_readiness"]),
-                    regional_expansion_fit=float(row["regional_expansion_fit"]),
-                )
-            )
-    return rows
+# ---------------------------------------------------------------------------
+# K Selection Justification (silhouette analysis)
+# ---------------------------------------------------------------------------
+def evaluate_cluster_counts(df: pd.DataFrame, k_range=range(2, 7), random_state: int = 42) -> pd.DataFrame:
+    """
+    Reproduces the silhouette analysis used to justify k=3. Returns a small
+    table of inertia + silhouette score for each candidate k, so the choice
+    of k is verifiable rather than asserted.
+
+    On the 20-industry dataset, silhouette scores fall in a narrow 0.195-0.211
+    band across k=2..6 -- there is no single sharply-optimal k. k=3 is used
+    for business interpretability (three actionable strategic archetypes),
+    not because it statistically dominates the alternatives.
+    """
+    from sklearn.metrics import silhouette_score
+
+    X = StandardScaler().fit_transform(df[ML_FEATURES])
+    rows = []
+    for k in k_range:
+        km = KMeans(n_clusters=k, random_state=random_state, n_init=10).fit(X)
+        rows.append({
+            "k": k,
+            "inertia": round(km.inertia_, 1),
+            "silhouette_score": round(silhouette_score(X, km.labels_), 3),
+        })
+    return pd.DataFrame(rows)
 
 
-def feature_matrix(profiles: Iterable[RiskProfile], features: list[str] = FEATURES) -> np.ndarray:
-    return np.array([[getattr(profile, feature) for feature in features] for profile in profiles], dtype=float)
+# ---------------------------------------------------------------------------
+# 1. K-Means Strategic Segmentation
+# ---------------------------------------------------------------------------
+def add_strategic_segments(df: pd.DataFrame, n_clusters: int = 3, random_state: int = 42) -> pd.DataFrame:
+    """
+    Groups industries into strategic segments using K-Means clustering on
+    standardised risk/growth features, then maps cluster IDs to
+    business-friendly segment names.
+    """
+    df = df.copy()
+    X = df[ML_FEATURES]
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    kmeans = KMeans(n_clusters=n_clusters, random_state=random_state, n_init=10)
+    df["cluster"] = kmeans.fit_predict(X_scaled)
+    df["strategic_segment"] = df["cluster"].map(CLUSTER_NAMES)
+
+    return df
 
 
-def standardize(matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    means = matrix.mean(axis=0)
-    stds = matrix.std(axis=0)
-    stds[stds == 0] = 1.0
-    return (matrix - means) / stds, means, stds
+# ---------------------------------------------------------------------------
+# 2. Monte Carlo Stress Testing
+# ---------------------------------------------------------------------------
+def monte_carlo_stress_test(row: pd.Series, simulations: int = 5000, shock_strength: float = 8, seed: int = 42) -> pd.Series:
+    """
+    Simulates future macro and industry-specific shocks to estimate the
+    probability that an industry's risk score crosses into the "High" band
+    (>= 70) under stress.
+    """
+    np.random.seed(seed)
 
+    base_values = row[RISK_FEATURES].values.astype(float)
+    weights = np.array([RISK_WEIGHTS[feature] for feature in RISK_FEATURES])
 
-def kmeans_segments(matrix: np.ndarray, k: int = 3, iterations: int = 50) -> tuple[np.ndarray, np.ndarray]:
-    """Small deterministic k-means implementation for strategic segmentation."""
-    scaled, _, _ = standardize(matrix)
-    if len(scaled) < k:
-        raise ValueError("k cannot be larger than the number of rows")
+    # Shared macro shock affects cost, talent, and global strategy together
+    shared_macro_shock = np.random.normal(0, shock_strength, size=(simulations, 1))
 
-    centroids = scaled[:k].copy()
-    labels = np.zeros(len(scaled), dtype=int)
+    # Individual shocks for each risk factor
+    individual_shocks = np.random.normal(
+        0, shock_strength * 0.65, size=(simulations, len(RISK_FEATURES))
+    )
 
-    for _ in range(iterations):
-        distances = np.linalg.norm(scaled[:, None, :] - centroids[None, :, :], axis=2)
-        new_labels = distances.argmin(axis=1)
-        new_centroids = centroids.copy()
-        for cluster in range(k):
-            members = scaled[new_labels == cluster]
-            if len(members):
-                new_centroids[cluster] = members.mean(axis=0)
-        if np.array_equal(labels, new_labels) and np.allclose(centroids, new_centroids):
-            break
-        labels = new_labels
-        centroids = new_centroids
-
-    return labels, centroids
-
-
-def segment_names(profiles: list[RiskProfile], labels: np.ndarray) -> dict[int, str]:
-    names: dict[int, str] = {}
-    for cluster in sorted(set(labels.tolist())):
-        members = [profiles[index] for index, label in enumerate(labels) if label == cluster]
-        avg_risk = np.mean([weighted_risk_score(member) for member in members])
-        avg_growth = np.mean([member.growth_potential for member in members])
-        avg_regional = np.mean([member.regional_expansion_fit for member in members])
-
-        if avg_growth >= 80 and avg_risk < 70:
-            name = "High-growth controllable risk"
-        elif avg_regional >= 82:
-            name = "Regional scale-out candidate"
-        elif avg_risk >= 70:
-            name = "Cost/compliance pressure zone"
-        else:
-            name = "Optimise before scaling"
-        names[cluster] = name
-    return names
-
-
-def risk_contributions(profile: RiskProfile) -> list[dict[str, float | str]]:
-    raw = asdict(profile)
-    contributions = []
-    for feature, weight in RISK_WEIGHTS.items():
-        value = float(raw[feature])
-        weighted = round(value * weight, 2)
-        contributions.append(
-            {
-                "feature": feature,
-                "score": value,
-                "weight": weight,
-                "weighted_points": weighted,
-                "share_of_total": round(weighted / weighted_risk_score(profile), 3),
-            }
-        )
-    return sorted(contributions, key=lambda item: float(item["weighted_points"]), reverse=True)
-
-
-def monte_carlo_stress_test(
-    profile: RiskProfile,
-    simulations: int = 5000,
-    shock_strength: float = 8.0,
-    seed: int = 42,
-) -> dict[str, float]:
-    """Estimate future risk distribution under uncertain macro/policy shocks."""
-    rng = np.random.default_rng(seed)
-    base = np.array([getattr(profile, feature) for feature in RISK_FEATURES], dtype=float)
-    weights = np.array([RISK_WEIGHTS[feature] for feature in RISK_FEATURES], dtype=float)
-
-    # Correlated shocks: cost, talent, and global strategy often move together.
-    shared_macro = rng.normal(0, shock_strength, size=(simulations, 1))
-    idiosyncratic = rng.normal(0, shock_strength * 0.65, size=(simulations, len(base)))
+    # Sensitivity of each risk factor to the shared macro shock
     shock_vector = np.array([0.75, 0.55, 0.35, 0.25, 0.85])
-    simulated_features = np.clip(base + shared_macro * shock_vector + idiosyncratic, 0, 100)
-    simulated_scores = simulated_features @ weights
 
-    return {
-        "expected_score": round(float(simulated_scores.mean()), 1),
-        "p10": round(float(np.percentile(simulated_scores, 10)), 1),
-        "p90": round(float(np.percentile(simulated_scores, 90)), 1),
-        "prob_high_risk": round(float((simulated_scores >= 70).mean()), 3),
-        "prob_medium_or_high": round(float((simulated_scores >= 45).mean()), 3),
-    }
+    simulated_values = base_values + shared_macro_shock * shock_vector + individual_shocks
+    simulated_values = np.clip(simulated_values, 0, 100)
 
+    simulated_scores = simulated_values @ weights
 
-def strategy_confidence(profile: RiskProfile) -> float:
-    score = weighted_risk_score(profile)
-    stress = monte_carlo_stress_test(profile)
-    resilience = 100 - stress["prob_high_risk"] * 100
-    readiness = (profile.automation_readiness + profile.regional_expansion_fit + profile.growth_potential) / 3
-    confidence = 0.45 * readiness + 0.35 * resilience + 0.20 * (100 - score)
-    return round(float(np.clip(confidence, 0, 100)), 1)
+    return pd.Series({
+        "expected_stressed_risk": round(simulated_scores.mean(), 1),
+        "p10_risk": round(np.percentile(simulated_scores, 10), 1),
+        "p90_risk": round(np.percentile(simulated_scores, 90), 1),
+        "prob_high_risk": round((simulated_scores >= 70).mean(), 3),
+    })
 
 
-def board_brief(profile: RiskProfile, segment: str | None = None) -> str:
-    score = weighted_risk_score(profile)
-    stress = monte_carlo_stress_test(profile)
-    top_drivers = risk_contributions(profile)[:3]
-    top_driver_text = ", ".join(
-        item["feature"].replace("_", " ") for item in top_drivers
+def add_stress_test_results(df: pd.DataFrame, simulations: int = 5000, shock_strength: float = 8, seed: int = 42) -> pd.DataFrame:
+    """Applies monte_carlo_stress_test() across every row in the dataframe."""
+    df = df.copy()
+    stress_results = df.apply(
+        lambda row: monte_carlo_stress_test(row, simulations, shock_strength, seed),
+        axis=1,
     )
-    segment_text = f" Segment: {segment}." if segment else ""
-
-    return (
-        f"{profile.industry}: total risk is {score}/100 ({risk_band(score)})."
-        f"{segment_text} Monte Carlo expected risk is {stress['expected_score']}/100, "
-        f"with a {stress['prob_high_risk'] * 100:.1f}% chance of crossing the high-risk threshold. "
-        f"The main risk drivers are {top_driver_text}. Recommended response: "
-        f"{recommendations(profile)[0]}"
-    )
+    return pd.concat([df, stress_results], axis=1)
 
 
-def analyze_portfolio(data_path: str | Path) -> list[dict[str, object]]:
-    profiles = load_profiles(data_path)
-    labels, _ = kmeans_segments(feature_matrix(profiles), k=3)
-    names = segment_names(profiles, labels)
-    results: list[dict[str, object]] = []
+# ---------------------------------------------------------------------------
+# 3. Explainability — Risk Contribution Analysis
+# ---------------------------------------------------------------------------
+def calculate_risk_contributions(row: pd.Series) -> pd.Series:
+    """Breaks a row's total risk score into its weighted per-factor contributions."""
+    contributions = {}
+    for feature, weight in RISK_WEIGHTS.items():
+        contributions[feature] = round(row[feature] * weight, 2)
+    return pd.Series(contributions)
 
-    for profile, label in zip(profiles, labels):
-        results.append(
-            {
-                "industry": profile.industry,
-                "risk_score": weighted_risk_score(profile),
-                "risk_band": risk_band(weighted_risk_score(profile)),
-                "segment": names[int(label)],
-                "strategy_confidence": strategy_confidence(profile),
-                "stress_test": monte_carlo_stress_test(profile),
-                "top_drivers": risk_contributions(profile)[:3],
-                "board_brief": board_brief(profile, names[int(label)]),
-            }
-        )
-    return results
+
+def build_contribution_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Returns a dataframe of weighted risk contributions per industry."""
+    contribution_df = df.apply(calculate_risk_contributions, axis=1)
+    contribution_df["industry"] = df["industry"]
+    return contribution_df
+
+
+def build_top_drivers_table(contribution_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    For each industry, ranks the risk factors by weighted contribution and
+    returns the top 3 drivers — this is what makes the model explainable
+    rather than a black box.
+    """
+    top_driver_rows = []
+
+    for _, row in contribution_df.iterrows():
+        industry = row["industry"]
+        driver_values = row.drop("industry").sort_values(ascending=False)
+
+        top_driver_rows.append({
+            "industry": industry,
+            "top_driver_1": driver_values.index[0],
+            "top_driver_1_points": driver_values.iloc[0],
+            "top_driver_2": driver_values.index[1],
+            "top_driver_2_points": driver_values.iloc[1],
+            "top_driver_3": driver_values.index[2],
+            "top_driver_3_points": driver_values.iloc[2],
+        })
+
+    return pd.DataFrame(top_driver_rows)
+
+
+def add_explainability(df: pd.DataFrame) -> pd.DataFrame:
+    """Convenience wrapper: builds contribution + top-drivers tables and
+    merges the top-driver columns back onto the main dataframe."""
+    contribution_df = build_contribution_table(df)
+    top_drivers_df = build_top_drivers_table(contribution_df)
+    return df.merge(top_drivers_df, on="industry", how="left")
+
+
+# ---------------------------------------------------------------------------
+# Convenience: run the full advanced ML pipeline on a base risk dataframe
+# ---------------------------------------------------------------------------
+def run_advanced_ml_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Takes a dataframe that already has 'risk_score' and 'risk_band'
+    (from risk_engine.py) and adds: strategic segments, Monte Carlo stress
+    test results, and explainability (top risk drivers).
+    """
+    df = add_strategic_segments(df)
+    df = add_stress_test_results(df)
+    df = add_explainability(df)
+    return df
+
+
+if __name__ == "__main__":
+    # Standalone demo: load the dataset, compute the base risk score inline
+    # (mirrors risk_engine.py logic), then run the full advanced ML pipeline.
+    df = pd.read_csv("data/risk_profiles.csv")
+
+    def calculate_risk_score(row):
+        return round(sum(row[f] * w for f, w in RISK_WEIGHTS.items()), 1)
+
+    def assign_risk_band(score):
+        if score >= 70:
+            return "High"
+        elif score >= 45:
+            return "Medium"
+        return "Low"
+
+    df["risk_score"] = df.apply(calculate_risk_score, axis=1)
+    df["risk_band"] = df["risk_score"].apply(assign_risk_band)
+
+    result = run_advanced_ml_pipeline(df)
+    cols = [
+        "industry", "risk_score", "risk_band", "strategic_segment",
+        "prob_high_risk", "top_driver_1", "top_driver_2", "top_driver_3",
+    ]
+    print(result[cols].sort_values("risk_score", ascending=False).to_string(index=False))
