@@ -158,6 +158,16 @@ Risk bands: Low (< 45)  |  Medium (45–69.9)  |  High (≥ 70)
 
 ---
 
+## 📐 Data Source & Methodology
+
+The 20-industry risk dataset (`data/risk_profiles.csv`) is **expert-estimated for prototype/capstone demonstration**, not pulled from a single official quantitative dataset. Scores were assigned using public Singapore policy and economic context (EDB, MOM, MTI, IRAS reports on sector-specific cost, talent, compliance, and growth trends) combined with general industry-characteristic reasoning.
+
+This is a standard approach for decision-support prototypes where labelled, audited outcome data (e.g., real FDI/relocation decisions by sector) isn't publicly available. A production version would calibrate these scores against real metrics — EDB investment approvals by sector, MOM labour market reports, or actual company relocation/expansion data.
+
+**On cluster count (k=3):** silhouette analysis across k=2–6 on the 20-industry dataset shows comparable scores (0.195–0.211) rather than one sharply optimal k — expected, since industry risk profiles naturally overlap rather than falling into cleanly separated groups. k=3 was chosen for business interpretability (mapping to three actionable strategic archetypes) rather than pure statistical optimality; this trade-off is intentional and documented here rather than hidden.
+
+---
+
 ## Real-Time Singapore Policy Context
 
 The recommendations are grounded in current Singapore policy signals, not just the raw dataset:
@@ -281,4 +291,3 @@ Full details in [`MODEL_CARD.md`](MODEL_CARD.md).
 ## 📄 License
 
 This project is available under the MIT License. Feel free to fork, adapt, and build on it.
-
