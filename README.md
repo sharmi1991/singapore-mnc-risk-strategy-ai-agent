@@ -9,6 +9,20 @@
 
 ---
 
+## 🎯 Problem Statement
+
+Singapore is a strong base for multinational companies because of its stability, talent quality, infrastructure, and regional connectivity. But high operating costs, strict labour policy, intense talent competition, compliance requirements, a small domestic market, and global supply-chain uncertainty can reduce competitiveness.
+
+Three risk dimensions drive this decision:
+
+- **Cost & talent pressure** — high operating costs, intense talent competition, and strict labour policy (Employment Pass, COMPASS)
+- **Compliance burden** — data privacy, employment rules, tax, and sector-specific regulation add real overhead
+- **Global exposure** — a small domestic market and supply-chain uncertainty create strategic risk
+
+MNCs need a structured, data-backed way to assess these risks across industries and choose a practical strategy — instead of relying on generic advice.
+
+---
+
 ## 📌 Overview
 
 Should a multinational company keep Singapore as a strategic hub, scale routine operations here, or shift work to lower-cost regional locations? This project answers that question with a working **agentic ML decision-support system** — not just a static dashboard.
