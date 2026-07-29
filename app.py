@@ -29,11 +29,11 @@ def to_profile(row: pd.Series) -> RiskProfile:
     )
 
 
-st.set_page_config(page_title="Singapore MNC Risk Analyzer", layout="wide")
+st.set_page_config(page_title="Singapore MNC Risk & Strategy AI Agent", layout="wide")
 df = pd.read_csv(DATA_PATH)
 
-st.title("Singapore MNC Risk & Strategy Analyzer")
-st.caption("Capstone dashboard using 2026 Singapore business context, weighted risk scoring, and strategy recommendations.")
+st.title("Singapore MNC Risk & Strategy AI Agent")
+st.caption("Agentic ML decision-support system using weighted risk scoring, K-Means segmentation, and Monte Carlo stress testing.")
 
 industry = st.selectbox("Industry", df["industry"].tolist())
 row = df[df["industry"] == industry].iloc[0]
